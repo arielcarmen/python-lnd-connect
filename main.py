@@ -433,6 +433,76 @@ async def verify_message(data: dict = Body(...)):
     except grpc.RpcError as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+@app.get('/vaccines')
+async def vaccines(data: dict = Body(...)):
+    vaccines = data.get('vaccines')
+    if not vaccines:
+        return JSONResponse(content={"error": "No vaccines for this patient"}, status_code=400)
+    return JSONResponse(content={"content": data['vaccines'] }, status_code=200)
+
+
+@app.post('/addvaccine')
+async def add_vaccine(data: dict = Body(...)):
+    
+    name = data.get('name')
+    vaccine_date = data.get('vaccine_date')
+    duration = data.get('duration')
+    status = data.get('status')
+    expiry_date = data.get('expiry_date')
+    healhcare_center = data.get('healhcare_center')
+
+    node_infos = get_node_info()
+    pubkey = node_infos['identity_pubkey']
+
+    vaccine_datas = {
+        "name": name,
+        "vaccine_date": vaccine_date,
+        "expiry_date": expiry_date,
+        "duration": duration,
+        "status": status,
+        "healthcare_center": healhcare_center
+    }
+
+    try:
+        sign_request = ln.SignMessageRequest(msg=f"".encode('utf-8'))
+        sign_response = lnd.stub.SignMessage(sign_request, metadata=lnd._get_metadata())
+
+        signature = sign_response.signature
+
+        return JSONResponse(content={"content": vaccine_datas}, status_code=200)
+    except grpc.RpcError as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+    
+@app.post('/verifyvaccines')
+async def verify_vaccines(data: dict = Body(...)):
+    vaccines = data.get('vaccines')
+    vaccines_to_check = data.get('vaccines_list')
+
+    conform = True
+
+    messages = ""
+
+    for vaccine in vaccines_to_check:
+        if not vaccines[vaccine]:
+            messages += f"{vaccine}: not found\n"
+            conform = False
+        else:
+            signature = vaccines[vaccine]['signature']
+            if not verify_message():
+                messages += f"{vaccine}: certifcate invalid\n"
+                conform = False
+            else:
+                messages += f"{vaccine}: certifcate is ok\n"
+    return JSONResponse(content={"message": messages, "conformity": conform}, status_code=500)
+
+def verify_signature(signature):
+    request = ln.VerifyMessageRequest(msg=message.encode('utf-8'), signature=signature)
+
+    # Appeler la méthode VerifyMessage
+    response = lnd.stub.VerifyMessage(request)
+
+    return True
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,0 +1,26 @@
+{
+    "pub_key": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+    
+    "user":{
+        "name": "Ariel",
+        "dob": "01/01/1901",
+        "blood_type": "H"
+    },
+
+    "vaccines": {
+        "polio": {
+            "status": "done",
+            "signature": "gfuyfigiugiugiyfyuutclgiugyicffhxrtrw",
+            "vaccine_date": "01/01/1905",
+            "duration": "unlimited",
+            "expiry_date": null
+        },
+        "covid": {
+            "status": "done",
+            "signature": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "vaccine_date": "01/01/1905",
+            "duration": 5,
+            "expiry_date": "01/01/1910"
+        }
+    }
+}
