@@ -25,6 +25,8 @@ A Python FastAPI server that provides an open HTTP API for interacting with an L
 | POST | `/payments` | Send a payment |
 | GET | `/payments` | List payment history |
 | GET | `/decode/{payment_request}` | Decode payment request |
+| POST | `/signmessage` | Sign a message with the node's private key |
+| POST | `/verifymessage` | Verify a signed message |
 
 ## Prerequisites
 
@@ -160,6 +162,28 @@ curl -X POST "http://localhost:8000/payments" \
 curl http://localhost:8000/balance
 ```
 
+### Sign a Message
+
+```bash
+curl -X POST "http://localhost:8000/signmessage" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Hello Hello LN BOOTCAMP COTONOU!"
+  }'
+```
+
+### Verify a Message
+
+```bash
+curl -X POST "http://localhost:8000/verifymessage" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Hello LN BOOTCAMP COTONOU!",
+    "signature": "<signature-from-signmessage>",
+    "pubkey": "<node-public-key>"
+  }'
+```
+
 ## API Documentation
 
 Once the server is running, visit:
@@ -201,3 +225,5 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 lnd-lightning-api/
 ├── venv/                 # Virtual environment
 ├── main.py
+├── create_tls_cert.py # (Optional running parameter if you want to create your custom TLS certificate from the Base64)
+```

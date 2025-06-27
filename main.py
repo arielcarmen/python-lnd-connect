@@ -1,5 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from urllib import request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import grpc
 import os
@@ -98,6 +100,9 @@ class Payment(BaseModel):
     fee: int
     payment_request: str
     status: str
+
+class SignMessageRequest(BaseModel):
+    message: str
 
 # LND Connection Class
 class LNDConnection:
@@ -216,6 +221,7 @@ class LNDConnection:
             return response
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to get channel balance: {str(e)}")
+
 
 # Initialize LND connection
 lnd = LNDConnection()
@@ -391,6 +397,42 @@ async def decode_payment_request(payment_request: str):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to decode payment request: {str(e)}")
+
+from fastapi import Body
+
+@app.post('/signmessage')
+async def sign_message(data: SignMessageRequest):
+    """Sign a message with the node's private key"""
+    msg = data.message
+    if not msg:
+        return JSONResponse(content={"error": "Message is required"}, status_code=400)
+
+    try:
+        sign_req = ln.SignMessageRequest(msg=msg.encode('utf-8'))
+        sign_resp = lnd.stub.SignMessage(sign_req, metadata=lnd._get_metadata())
+        return JSONResponse(content={"signature": sign_resp.signature}, status_code=200)
+    except grpc.RpcError as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.post('/verifymessage')
+async def verify_message(data: dict = Body(...)):
+    msg = data.get('message')
+    signature = data.get('signature')
+    pubkey = data.get('pubkey') # The public key of the sender
+    if not msg or not signature or not pubkey:
+        return JSONResponse(content={"error": "Message, signature, and pubkey are required"}, status_code=400)
+
+    try:
+        verify_req = ln.VerifyMessageRequest(msg=msg.encode('utf-8'), signature=signature)
+        verify_resp = lnd.stub.VerifyMessage(verify_req, metadata=lnd._get_metadata())
+
+        # Safely get recovered_pubkey if it exists
+        recovered_pubkey = getattr(verify_resp, 'recovered_pubkey', None)
+        is_valid = verify_resp.valid
+        return JSONResponse(content={"valid": is_valid }, status_code=200)
+    except grpc.RpcError as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
 if __name__ == "__main__":
     import uvicorn
