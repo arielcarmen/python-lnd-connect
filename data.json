@@ -7,20 +7,20 @@
         "blood_type": "H"
     },
 
-    "vaccines": {
+    "carnet": {
         "polio": {
-            "status": "done",
-            "signature": "gfuyfigiugiugiyfyuutclgiugyicffhxrtrw",
-            "vaccine_date": "01/01/1905",
-            "duration": "unlimited",
-            "expiry_date": null
+            "vaccin": "polio",
+            "centre_signature": "gfuyfigiugiugiyfyuutclgiugyicffhxrtrw",
+            "centre_key": "033f69665361e75df82aa6ce7b1ae2989b4635f16e15a4f515b92d2bacb63f8298",
+            "date": "01-01-1905",
+            "date_expiration": null
         },
         "covid": {
-            "status": "done",
-            "signature": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "vaccine_date": "01/01/1905",
-            "duration": 5,
-            "expiry_date": "01/01/1910"
+            "vaccin": "polio",
+            "centre_signature": "gfuyfigiugiugiyfyuutclgiugyicffhxrtrw",
+            "centre_key": "033f69665361e75df82aa6ce7b1ae2989b4635f16e15a4f515b92d2bacb63f8298",
+            "date": "01-01-1905",
+            "expiry_date": "01-01-1910"
         }
     }
 }

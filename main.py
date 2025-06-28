@@ -432,51 +432,81 @@ async def verify_message(data: dict = Body(...)):
         return JSONResponse(content={"valid": is_valid }, status_code=200)
     except grpc.RpcError as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+# HAIL !
+# 
+# HYDRA
+
+# Configuration de la connexion à MongoDB
+
+import pymongo
+
+url = "mongodb://localhost:27017/"
+
+client = pymongo.MongoClient(url)
+db = client["lntest"]
+collection = db["carnets"] 
 
 @app.get('/vaccines')
 async def vaccines(data: dict = Body(...)):
-    vaccines = data.get('vaccines')
+    key = data.get('key')
+
+    carnet = collection.find_one({"pub_key": key},)
+    vaccines = carnet['vaccines']
+    print(vaccines)
+
     if not vaccines:
         return JSONResponse(content={"error": "No vaccines for this patient"}, status_code=400)
-    return JSONResponse(content={"content": data['vaccines'] }, status_code=200)
+    return JSONResponse(content={"content": vaccines }, status_code=200)
 
 
 @app.post('/addvaccine')
 async def add_vaccine(data: dict = Body(...)):
-    
-    name = data.get('name')
-    vaccine_date = data.get('vaccine_date')
-    duration = data.get('duration')
-    status = data.get('status')
-    expiry_date = data.get('expiry_date')
-    healhcare_center = data.get('healhcare_center')
 
-    node_infos = get_node_info()
-    pubkey = node_infos['identity_pubkey']
+    pub_key = data.get('key')
+    user = collection.find_one({"pub_key": pub_key},)
+    carnet = user['carnet']
+
+    vaccin = data.get('vaccin')
+    centre_key = data.get('centre_key')
+    date_vaccin = data.get('date_vaccin')
+    expiry_date = data.get('expiry_date')
 
     vaccine_datas = {
-        "name": name,
-        "vaccine_date": vaccine_date,
-        "expiry_date": expiry_date,
-        "duration": duration,
-        "status": status,
-        "healthcare_center": healhcare_center
+        "vaccin": vaccin,
+        "centre_key": centre_key,
+        "date": date_vaccin,
+        "date_expiration": expiry_date
     }
 
     try:
-        sign_request = ln.SignMessageRequest(msg=f"".encode('utf-8'))
+        sign_request = ln.SignMessageRequest(msg=f"{pub_key+vaccin}".encode('utf-8'))
         sign_response = lnd.stub.SignMessage(sign_request, metadata=lnd._get_metadata())
 
         signature = sign_response.signature
+        vaccine_datas["centre_signature"] = signature
 
-        return JSONResponse(content={"content": vaccine_datas}, status_code=200)
+        carnet[vaccin] = vaccine_datas
+
+        collection.update_one(
+            {"pub_key": pub_key},
+            {"$set": {'carnet': carnet}}
+        )
+
+        return JSONResponse(content={"content": carnet}, status_code=200)
     except grpc.RpcError as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
     
     
 @app.post('/verifyvaccines')
 async def verify_vaccines(data: dict = Body(...)):
-    vaccines = data.get('vaccines')
+    
+    pub_key = data.get('key')
+    user = collection.find_one({"pub_key": pub_key},)
+    carnet = user['carnet']
+
+    print(carnet)
+
     vaccines_to_check = data.get('vaccines_list')
 
     conform = True
@@ -484,25 +514,32 @@ async def verify_vaccines(data: dict = Body(...)):
     messages = ""
 
     for vaccine in vaccines_to_check:
-        if not vaccines[vaccine]:
-            messages += f"{vaccine}: not found\n"
+        vaccin = carnet[vaccine]
+        if not vaccin:
+            messages += f"{vaccine}: non fait\n"
             conform = False
         else:
-            signature = vaccines[vaccine]['signature']
-            if not verify_message():
+            signature = vaccin['centre_signature']
+            # key = vaccin['centre_key']
+            message = f"{pub_key+vaccin}"
+
+            if not verify_message(message, signature):
                 messages += f"{vaccine}: certifcate invalid\n"
                 conform = False
             else:
                 messages += f"{vaccine}: certifcate is ok\n"
-    return JSONResponse(content={"message": messages, "conformity": conform}, status_code=500)
 
-def verify_signature(signature):
+    return JSONResponse(content={"message": messages, "conformity": conform}, status_code=200)
+
+def verify_signature(message, signature):
+
     request = ln.VerifyMessageRequest(msg=message.encode('utf-8'), signature=signature)
-
-    # Appeler la méthode VerifyMessage
     response = lnd.stub.VerifyMessage(request)
 
-    return True
+    return response.valid
+
+def verify_vaccines(data: dict = Body(...)):
+    db = db.getSiblingDB('carnets')
 
 if __name__ == "__main__":
     import uvicorn
