@@ -441,6 +441,7 @@ async def verify_message(data: dict = Body(...)):
 
 import pymongo
 import qrcode
+import datetime
 
 url = "mongodb://localhost:27017/"
 
@@ -450,15 +451,23 @@ collection = db["carnets"]
 
 @app.get('/vaccines')
 async def vaccines(data: dict = Body(...)):
-    key = data.get('key')
+    pub_key = data.get('key')
+    user = collection.find_one({"pub_key": pub_key},)
+    carnet = user['carnet']
 
-    carnet = collection.find_one({"pub_key": key},)
-    vaccines = carnet['vaccines']
-    print(vaccines)
+    # cles_a_supprimer = ["âge", "ville", "profession"]
+
+    # # Supprimer les clés du dictionnaire
+    # for cle in cles_a_supprimer:
+    #     if cle in user:
+    #         del user[cle]
+
+    img = qrcode.make(carnet)
+    img.save(f"{pub_key}_{datetime.datetime.now()}_qrcode.png")
 
     if not vaccines:
         return JSONResponse(content={"error": "No vaccines for this patient"}, status_code=400)
-    return JSONResponse(content={"content": vaccines }, status_code=200)
+    return JSONResponse(content={"content": carnet }, status_code=200)
 
 
 @app.post('/addvaccine')
@@ -493,18 +502,6 @@ async def add_vaccine(data: dict = Body(...)):
             {"pub_key": pub_key},
             {"$set": {'carnet': carnet}}
         )
-        user = collection.find_one({"pub_key": pub_key},)
-        carnet = user['carnet']
-
-        # cles_a_supprimer = ["âge", "ville", "profession"]
-
-        # # Supprimer les clés du dictionnaire
-        # for cle in cles_a_supprimer:
-        #     if cle in user:
-        #         del user[cle]
-                
-        img = qrcode.make(carnet)
-        img.save(f"{pub_key}_qrcode.png")
 
         return JSONResponse(content={"content": carnet}, status_code=200)
     except grpc.RpcError as e:
