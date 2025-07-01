@@ -524,7 +524,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 # Use the application default credentials.
-cred = credentials.Certificate('./med-key.json')
+cred = credentials.Certificate('./med-book.json')
 
 # Application Default credentials are automatically created.
 db_app = firebase_admin.initialize_app(cred)
@@ -548,7 +548,6 @@ async def get_vaccines_by_user(data: dict = Body(...)):
     user_ref = db.collection("users").document(npi)
     vaccins_in_book = user_ref.get().to_dict()['vaccins']
     return JSONResponse(content={"vaccins": vaccins_in_book}, status_code=200)
-
 
 @app.post('/add_user')
 async def add_vaccine(data: dict = Body(...)):
