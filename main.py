@@ -449,7 +449,7 @@ client = pymongo.MongoClient(url)
 db = client["lntest"]
 collection = db["carnets"] 
 
-@app.get('/vaccines')
+@app.get('/vaccine')
 async def vaccines(data: dict = Body(...)):
     pub_key = data.get('key')
     user = collection.find_one({"pub_key": pub_key},)
@@ -524,7 +524,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 # Use the application default credentials.
-cred = credentials.Certificate('./med-book.json')
+cred = credentials.Certificate('./med-key.json')
 
 # Application Default credentials are automatically created.
 db_app = firebase_admin.initialize_app(cred)
@@ -535,14 +535,23 @@ async def get_users(data: dict = Body(...)):
     users_ref = db.collection("users").stream()
     return [doc.to_dict() for doc in users_ref]
 
-@app.get('/user_vaccines')
+@app.get('/login')
 async def get_vaccines_by_user(data: dict = Body(...)):
     npi = data.get('npi')
-    orders_ref = db.collection("vaccines").where("user", "==", npi).stream()
-    print(orders_ref)
+
+    user_ref = db.collection("users").document(npi)
+    return JSONResponse(content={"vaccins": user_ref}, status_code=500)
+
+@app.get('/vaccines')
+async def get_vaccines_by_user(data: dict = Body(...)):
+    npi = data.get('npi')
+    user_ref = db.collection("users").document(npi)
+    vaccins_in_book = user_ref.get().to_dict()['vaccins']
+    return JSONResponse(content={"vaccins": vaccins_in_book}, status_code=200)
+
 
 @app.post('/add_user')
-def add_vaccine(data: dict = Body(...)):
+async def add_vaccine(data: dict = Body(...)):
     npi = data.get('npi')
     nom = data.get('nom')
     prenom = data.get('prenom')
