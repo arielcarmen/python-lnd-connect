@@ -567,8 +567,7 @@ async def login(data: dict = Body(...)):
     return JSONResponse(content={"message": user_ref.get().to_dict()}, status_code=201)
 
 @app.get('/vaccines')
-async def get_vaccines_by_user(data: dict = Body(...)):
-    npi = data.get('npi')
+async def get_vaccines_by_user(npi: str):
     user_ref = db.collection("users").document(npi)
     vaccins_in_book = user_ref.get().to_dict()['vaccins']
     return JSONResponse(content={"vaccins": vaccins_in_book}, status_code=200)
