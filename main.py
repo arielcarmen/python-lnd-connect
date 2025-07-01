@@ -12,7 +12,10 @@ import asyncio
 from datetime import datetime
 from dotenv import load_dotenv
 
+from macaroon_import import write_macaroon_from_env
+
 # Load environment variables from .env file
+write_macaroon_from_env()
 load_dotenv()
 
 # Import LND gRPC stubs (you'll need to generate these)
