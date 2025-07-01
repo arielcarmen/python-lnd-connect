@@ -530,14 +530,35 @@ cred = credentials.Certificate('./med-book.json')
 db_app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_user(username: str):
+    doc = db.collection("users").document(username).get()
+    return doc.to_dict() if doc.exists else None
+
 @app.get('/users')
 async def get_users(data: dict = Body(...)):
     users_ref = db.collection("users").stream()
     return [doc.to_dict() for doc in users_ref]
 
-@app.get('/login')
+@app.post('/login')
 async def get_vaccines_by_user(data: dict = Body(...)):
     npi = data.get('npi')
+    password = data.get('password')
+    db_user = db.collection("users").document(npi).get()
+    if not db_user:
+        return JSONResponse(status_code=404, content={"success": False, "message": "Utilisateur non trouvé"})
+
+    if not verify_password(password, db_user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Mot de passe incorrect")
 
     user_ref = db.collection("users").document(npi)
     return JSONResponse(content={"vaccins": user_ref}, status_code=500)
@@ -559,10 +580,12 @@ async def add_vaccine(data: dict = Body(...)):
     date = data.get('date')
     email = data.get('email')
     telephone = data.get('telephone')
+    pwd = data.get('password')
+    password = hash_password(pwd)
     
     try:
         doc_ref = db.collection("users").document(npi)
-        doc_ref.set({"npi": npi, "nom": nom, "prenom": prenom, "sexe": sexe, "email": email, "telephone": telephone, "date": date, "vaccins": {}})
+        doc_ref.set({"npi": npi,"hashed_password": password, "nom": nom, "prenom": prenom, "sexe": sexe, "email": email, "telephone": telephone, "date": date, "vaccins": {}})
         return JSONResponse(content={"message": "Utilisateur crée avec succes"}, status_code=200)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
