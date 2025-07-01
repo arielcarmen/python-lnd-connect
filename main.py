@@ -530,14 +530,17 @@ cred = credentials.Certificate('./med-book.json')
 db_app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-from passlib.context import CryptContext
+# from passlib.context import CryptContext
+import bcrypt
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str):
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     return pwd_context.hash(password)
 
 def verify_password(plain_password, hashed_password):
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_user(username: str):
@@ -550,18 +553,18 @@ async def get_users(data: dict = Body(...)):
     return [doc.to_dict() for doc in users_ref]
 
 @app.post('/login')
-async def get_vaccines_by_user(data: dict = Body(...)):
+async def login(data: dict = Body(...)):
     npi = data.get('npi')
     password = data.get('password')
-    db_user = db.collection("users").document(npi).get()
+    db_user = db.collection("users").document(npi).get().to_dict()
     if not db_user:
         return JSONResponse(status_code=404, content={"success": False, "message": "Utilisateur non trouvé"})
 
     if not verify_password(password, db_user["hashed_password"]):
-        raise HTTPException(status_code=401, detail="Mot de passe incorrect")
+        return JSONResponse(content={"success": False,"message": "Mot de passe incorrect"}, status_code=401)
 
     user_ref = db.collection("users").document(npi)
-    return JSONResponse(content={"vaccins": user_ref}, status_code=500)
+    return JSONResponse(content={"message": user_ref.get().to_dict()}, status_code=201)
 
 @app.get('/vaccines')
 async def get_vaccines_by_user(data: dict = Body(...)):
@@ -581,6 +584,9 @@ async def add_vaccine(data: dict = Body(...)):
     email = data.get('email')
     telephone = data.get('telephone')
     pwd = data.get('password')
+
+    if get_user(npi):
+        return JSONResponse(content={"message": "NPI déjà exitant"}, status_code=400)
     password = hash_password(pwd)
     
     try:
