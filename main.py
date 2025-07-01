@@ -470,74 +470,41 @@ async def vaccines(data: dict = Body(...)):
     return JSONResponse(content={"content": carnet }, status_code=200)
 
 
-@app.post('/addvaccine')
-async def add_vaccine(data: dict = Body(...)):
+# @app.post('/addvaccine')
+# async def add_vaccine(data: dict = Body(...)):
+#     pub_key = data.get('key')
+#     user = collection.find_one({"pub_key": pub_key},)
+#     carnet = user['carnet']
 
-    pub_key = data.get('key')
-    user = collection.find_one({"pub_key": pub_key},)
-    carnet = user['carnet']
+#     vaccin = data.get('vaccin')
+#     centre_key = data.get('centre_key')
+#     date_vaccin = data.get('date_vaccin')
+#     expiry_date = data.get('expiry_date')
 
-    vaccin = data.get('vaccin')
-    centre_key = data.get('centre_key')
-    date_vaccin = data.get('date_vaccin')
-    expiry_date = data.get('expiry_date')
+#     vaccine_datas = {
+#         "vaccin": vaccin,
+#         "centre_key": centre_key,
+#         "date": date_vaccin,
+#         "date_expiration": expiry_date
+#     }
 
-    vaccine_datas = {
-        "vaccin": vaccin,
-        "centre_key": centre_key,
-        "date": date_vaccin,
-        "date_expiration": expiry_date
-    }
+#     try:
+#         sign_request = ln.SignMessageRequest(msg=f"{pub_key+vaccin}".encode('utf-8'))
+#         sign_response = lnd.stub.SignMessage(sign_request, metadata=lnd._get_metadata())
 
-    try:
-        sign_request = ln.SignMessageRequest(msg=f"{pub_key+vaccin}".encode('utf-8'))
-        sign_response = lnd.stub.SignMessage(sign_request, metadata=lnd._get_metadata())
+#         signature = sign_response.signature
+#         vaccine_datas["centre_signature"] = signature
 
-        signature = sign_response.signature
-        vaccine_datas["centre_signature"] = signature
+#         carnet[vaccin] = vaccine_datas
 
-        carnet[vaccin] = vaccine_datas
+#         collection.update_one(
+#             {"pub_key": pub_key},
+#             {"$set": {'carnet': carnet}}
+#         )
 
-        collection.update_one(
-            {"pub_key": pub_key},
-            {"$set": {'carnet': carnet}}
-        )
-
-        return JSONResponse(content={"content": carnet}, status_code=200)
-    except grpc.RpcError as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
-    
-    
-@app.post('/verifyvaccines')
-async def verify_vaccines(data: dict = Body(...)):
-    pub_key = data.get('key')
-    user = collection.find_one({"pub_key": pub_key},)
-    carnet = user['carnet']
-    vaccines_to_check = data.get('vaccines_list')
-
-    conform = True
-
-    messages = ""
-
-    for vaccine in vaccines_to_check:
-        vaccin = {}
-        if vaccine not in carnet:
-            messages += f"Vaccin {vaccine}: non fait - "
-            conform = False
-        else:
-            vaccin = carnet[vaccine]
-            signature = vaccin['centre_signature']
-            # key = vaccin['centre_key']
-            message = f"{pub_key+vaccin['vaccin']}"
-            if verify_signature(message, signature) == True:
-                messages += f"Vaccin {vaccine}: certifcate is ok - "
-                
-            else:
-                print(message)
-                messages += f"Vaccin {vaccine}: certifcate invalid - "
-                conform = False
-
-    return JSONResponse(content={"message": messages, "conformity": conform}, status_code=200)
+#         return JSONResponse(content={"content": carnet}, status_code=200)
+#     except grpc.RpcError as e:
+#         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 def verify_signature(msg, sig):
     try:
@@ -551,10 +518,114 @@ def verify_signature(msg, sig):
     except grpc.RpcError as e:
         return str(e)
     
-    req = ln.VerifyMessageRequest(msg=msg.encode('utf-8'), signature=sig)
-    res = lnd.stub.VerifyMessage(req, metadata=lnd._get_metadata())
+# Database actions
+    
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-    return res.valid
+# Use the application default credentials.
+cred = credentials.Certificate('./med-book.json')
+
+# Application Default credentials are automatically created.
+db_app = firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+@app.get('/users')
+async def get_users(data: dict = Body(...)):
+    users_ref = db.collection("users").stream()
+    return [doc.to_dict() for doc in users_ref]
+
+@app.get('/user_vaccines')
+async def get_vaccines_by_user(data: dict = Body(...)):
+    npi = data.get('npi')
+    orders_ref = db.collection("vaccines").where("user", "==", npi).stream()
+    print(orders_ref)
+
+@app.post('/add_user')
+def add_vaccine(data: dict = Body(...)):
+    npi = data.get('npi')
+    nom = data.get('nom')
+    prenom = data.get('prenom')
+    sexe = data.get('sexe')
+    nom = data.get('nom')
+    date = data.get('date')
+    email = data.get('email')
+    telephone = data.get('telephone')
+    
+    try:
+        doc_ref = db.collection("users").document(npi)
+        doc_ref.set({"npi": npi, "nom": nom, "prenom": prenom, "sexe": sexe, "email": email, "telephone": telephone, "date": date, "vaccins": {}})
+        return JSONResponse(content={"message": "Utilisateur crée avec succes"}, status_code=200)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    
+
+@app.post('/add_vaccine')
+def add_vaccine(data: dict = Body(...)):
+    npi = data.get('npi')
+
+    user_ref = db.collection("users").document(npi)
+
+    pub_key = data.get('pub_key')
+    vaccin = data.get('vaccin')
+    date = data.get('date')
+    date_expiration = data.get('date_expiration')
+    infos_vaccin = {"vaccin": vaccin, "date": date, "date_expiration": date_expiration, "pub_key": pub_key}
+    
+    try:
+
+        try:
+            sign_request = ln.SignMessageRequest(msg=f"{pub_key+vaccin}".encode('utf-8'))
+            sign_response = lnd.stub.SignMessage(sign_request, metadata=lnd._get_metadata())
+
+            signature = sign_response.signature
+            infos_vaccin["signature"] = signature
+            
+            vaccins_in_book = user_ref.get().to_dict()['vaccins']
+
+            vaccins_in_book[vaccin] = infos_vaccin
+
+            user_ref.update({"vaccins": vaccins_in_book})
+
+            return JSONResponse(content={"message": "Vaccin crée avec succes"}, status_code=200)
+        except grpc.RpcError as e:
+            return JSONResponse(content={"error": str(e)}, status_code=500)
+                
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+@app.post('/verify_vaccines')
+async def verify_vaccines(data: dict = Body(...)):
+    npi = data.get('npi')
+    user_ref = db.collection("users").document(npi)
+
+    vaccins_in_book = user_ref.get().to_dict()['vaccins']
+
+    vaccines_to_check = data.get('vaccines_list')
+
+    conform = True
+
+    messages = ""
+
+    for vaccine in vaccines_to_check:
+        vaccin = {}
+        if vaccine not in vaccins_in_book:
+            messages += f"Vaccin {vaccine}: non fait - "
+            conform = False
+        else:
+            vaccin = vaccins_in_book[vaccine]
+            signature = vaccin['signature']
+            pub_key = vaccin['pub_key']
+            message = f"{pub_key+vaccin['vaccin']}"
+            if verify_signature(message, signature) == True:
+                messages += f"Vaccin {vaccine}: certifcate is ok - "
+                
+            else:
+                print(message)
+                messages += f"Vaccin {vaccine}: certifcate invalid - "
+                conform = False
+
+    return JSONResponse(content={"message": messages, "conformity": conform}, status_code=200)
 
 
 if __name__ == "__main__":

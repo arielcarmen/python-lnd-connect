@@ -24,3 +24,17 @@
         }
     }
 }
+
+{
+    "pub_key": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb",
+    
+    "user":{
+        "name": "Ariel",
+        "dob": "01/01/1901",
+        "blood_type": "H"
+    },
+
+    "carnet": {
+        
+    }
+}
