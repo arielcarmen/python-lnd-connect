@@ -10,6 +10,7 @@ COPY . .
 
 # Install project dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+RUN cp .env.example .env
 RUN python jsoner.py
 
 # RUN ./setup2.sh
