@@ -598,26 +598,31 @@ async def add_vaccine(data: dict = Body(...)):
         return JSONResponse(content={"error": str(e)}, status_code=500)
     
 
+def get_pubkey():
+    response = lnd.stub.GetInfo(ln.GetInfoRequest())
+    return response.identity_pubkey
+    
 @app.post('/add_vaccine')
 def add_vaccine(data: dict = Body(...)):
     npi = data.get('npi')
 
     user_ref = db.collection("users").document(npi)
 
-    pub_key = data.get('pub_key')
     vaccin = data.get('vaccin')
     date = data.get('date')
     date_expiration = data.get('date_expiration')
-    infos_vaccin = {"vaccin": vaccin, "date": date, "date_expiration": date_expiration, "pub_key": pub_key}
+    infos_vaccin = {"vaccin": vaccin, "date": date, "date_expiration": date_expiration}
     
     try:
 
         try:
-            sign_request = ln.SignMessageRequest(msg=f"{pub_key+vaccin}".encode('utf-8'))
+            sign_request = ln.SignMessageRequest(msg=f"{npi+vaccin}".encode('utf-8'))
             sign_response = lnd.stub.SignMessage(sign_request, metadata=lnd._get_metadata())
 
             signature = sign_response.signature
             infos_vaccin["signature"] = signature
+
+            infos_vaccin["pub_key"] = get_pubkey()
             
             vaccins_in_book = user_ref.get().to_dict()['vaccins']
 
