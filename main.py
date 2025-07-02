@@ -566,13 +566,25 @@ async def login(data: dict = Body(...)):
         return JSONResponse(content={"success": False,"message": "Mot de passe incorrect"}, status_code=401)
 
     user_ref = db.collection("users").document(npi)
-    return JSONResponse(content={user_ref.get().to_dict()}, status_code=201)
+    return JSONResponse(content={"user": user_ref.get().to_dict()}, status_code=201)
 
-@app.get('/users')
-async def get_vaccines_by_user(npi: str):
-    user_ref = db.collection("users").stream()
-    vaccins_in_book = user_ref.get().to_dict()['vaccins']
-    return JSONResponse(content={"users": vaccins_in_book}, status_code=200)
+@app.get('/patients')
+async def all_patients():
+    patients_ref = db.collection("users").stream()
+    patients_list = []
+    for doc in patients_ref:
+        data = doc.to_dict()
+        filtered_data = {
+            "nom": data.get("nom"),
+            "prenom": data.get("prenom"),
+            "npi": data.get("npi"),
+            "sexe": data.get("sexe"),
+            "date": data.get("date"),
+            "telephone": data.get("telephone"),
+            "email": data.get("email"),
+        }
+        patients_list.append(filtered_data)
+    return JSONResponse(content={"patients": patients_list}, status_code=200)
 
 @app.get('/vaccines')
 async def get_vaccines_by_user(npi: str):
