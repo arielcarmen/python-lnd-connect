@@ -9,7 +9,7 @@ WORKDIR /app
 COPY . .
 
 # Install project dependencies
-# RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 # RUN chmod +x setup2.sh
 
 # RUN ./setup2.sh
