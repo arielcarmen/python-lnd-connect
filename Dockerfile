@@ -10,7 +10,8 @@ COPY . .
 
 # Install project dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-# RUN chmod +x setup2.sh
+RUN cp .env.example .env
+RUN python jsoner.py
 
 RUN touch med-book.json
 
