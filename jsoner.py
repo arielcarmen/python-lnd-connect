@@ -1,10 +1,6 @@
 import os
 import base64
 
-<<<<<<< HEAD
-b64 = os.getenv("GOOGLE_SERVICE_ACCOUNT_B64")
-
-=======
 
 b64= """ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAibWVkLWJvb2st
 N2Y0NjkiLAogICJwcml2YXRlX2tleV9pZCI6ICIwYTNmYzY4MzVhMjE2MjYyOWNlZjEzNjIwNzlj
@@ -49,7 +45,6 @@ ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2ZpcmVi
 YXNlLWFkbWluc2RrLWZic3ZjJTQwbWVkLWJvb2stN2Y0NjkuaWFtLmdzZXJ2aWNlYWNjb3VudC5j
 b20iLAogICJ1bml2ZXJzZV9kb21haW4iOiAiZ29vZ2xlYXBpcy5jb20iCn0K
 """.strip()
->>>>>>> 3205703a51b0bc0b99f182682b41bdafa84e7949
 if b64:
     decoded = base64.b64decode(b64)
     with open("med-book.json", "wb") as f:
