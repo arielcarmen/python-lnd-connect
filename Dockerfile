@@ -12,7 +12,9 @@ COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
 # RUN chmod +x setup2.sh
 
-# RUN ./setup2.sh
+RUN touch med-book.json
+
+RUN cp a.txt med-book.json
 
 # Run the web service on container startup.
 CMD ["python", "main.py"]
