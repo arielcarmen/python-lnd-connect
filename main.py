@@ -45,8 +45,8 @@ app.add_middleware(
 # Configuration
 class Config:
     LND_HOST = os.getenv("LND_HOST", "localhost:10009")
-    LND_TLS_CERT_PATH = os.getenv("LND_TLS_CERT_PATH", "~/.lnd/tls.cert")
-    LND_MACAROON_PATH = os.getenv("LND_MACAROON_PATH", "~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon")
+    LND_TLS_CERT_PATH = os.getenv("LND_TLS_CERT_PATH", "certs/tls.cert")
+    LND_MACAROON_PATH = os.getenv("LND_MACAROON_PATH", "certs/admin.macaroon")
     SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
     SERVER_PORT = int(os.getenv("SERVER_PORT", "8000"))
     
