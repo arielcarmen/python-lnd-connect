@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN touch med-book.json
 
-RUN cp a.txt med-book.json
+RUN python jsoner.py
+
 RUN cp .env.example .env
 
 # Run the web service on container startup.
