@@ -15,7 +15,6 @@ from dotenv import load_dotenv
 from macaroon_import import write_macaroon_from_env
 
 # Load environment variables from .env file
-write_macaroon_from_env()
 load_dotenv()
 
 # Import LND gRPC stubs (you'll need to generate these)
@@ -442,21 +441,21 @@ async def verify_message(data: dict = Body(...)):
 
 # Configuration de la connexion à MongoDB
 
-import pymongo
-import qrcode
-import datetime
+# import pymongo
+# import qrcode
+# import datetime
 
-url = "mongodb://localhost:27017/"
+# url = "mongodb://localhost:27017/"
 
-client = pymongo.MongoClient(url)
-db = client["lntest"]
-collection = db["carnets"] 
+# client = pymongo.MongoClient(url)
+# db = client["lntest"]
+# collection = db["carnets"] 
 
-@app.get('/vaccine')
-async def vaccines(data: dict = Body(...)):
-    pub_key = data.get('key')
-    user = collection.find_one({"pub_key": pub_key},)
-    carnet = user['carnet']
+# @app.get('/vaccine')
+# async def vaccines(data: dict = Body(...)):
+    # pub_key = data.get('key')
+    # user = collection.find_one({"pub_key": pub_key},)
+    # carnet = user['carnet']
 
     # cles_a_supprimer = ["âge", "ville", "profession"]
 
@@ -465,12 +464,12 @@ async def vaccines(data: dict = Body(...)):
     #     if cle in user:
     #         del user[cle]
 
-    img = qrcode.make(carnet)
-    img.save(f"{pub_key}_{datetime.datetime.now()}_qrcode.png")
+    # img = qrcode.make(carnet)
+    # img.save(f"{pub_key}_{datetime.datetime.now()}_qrcode.png")
 
-    if not vaccines:
-        return JSONResponse(content={"error": "No vaccines for this patient"}, status_code=400)
-    return JSONResponse(content={"content": carnet }, status_code=200)
+    # if not vaccines:
+    #     return JSONResponse(content={"error": "No vaccines for this patient"}, status_code=400)
+    # return JSONResponse(content={"content": carnet }, status_code=200)
 
 
 # @app.post('/addvaccine')
