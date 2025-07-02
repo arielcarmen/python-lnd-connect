@@ -47,7 +47,7 @@ b20iLAogICJ1bml2ZXJzZV9kb21haW4iOiAiZ29vZ2xlYXBpcy5jb20iCn0K
 """.strip()
 if b64:
     decoded = base64.b64decode(b64)
-    with open("med-book.jsn", "wb") as f:
+    with open("med-book.json", "wb") as f:
         f.write(decoded)
     print("✅ serviceAccount.json généré avec succès")
 else:
