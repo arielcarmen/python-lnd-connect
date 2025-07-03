@@ -4,3 +4,4 @@ python-dotenv
 lndgrpc
 firebase_admin
 passlib[bcrypt]
+python-dateutil
