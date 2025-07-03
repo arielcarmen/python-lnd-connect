@@ -581,6 +581,7 @@ async def login(data: dict = Body(...)):
         "date": db_user.get('date'),
         "email": db_user.get('email'),
         "telephone": db_user.get('telephone'),
+        "role": db_user.get('role')
     }
     return JSONResponse(content={"user": user_datas}, status_code=201)
 
@@ -659,6 +660,7 @@ async def add_patient(data: dict = Body(...)):
     email = data.get('email')
     telephone = data.get('telephone')
     pwd = data.get('password')
+    role = "patient"
 
     if get_user(npi):
         return JSONResponse(content={"message": "NPI déjà exitant"}, status_code=400)
@@ -666,7 +668,7 @@ async def add_patient(data: dict = Body(...)):
     
     try:
         doc_ref = db.collection("users").document(npi)
-        doc_ref.set({"npi": npi,"hashed_password": password, "nom": nom, "prenom": prenom, "sexe": sexe, "email": email, "telephone": telephone, "date": date})
+        doc_ref.set({"npi": npi,"hashed_password": password, "nom": nom, "prenom": prenom, "sexe": sexe, "email": email, "telephone": telephone, "date": date, "role":role})
         return JSONResponse(content={"message": "Utilisateur crée avec succes"}, status_code=200)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
