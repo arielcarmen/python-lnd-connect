@@ -566,8 +566,15 @@ async def login(data: dict = Body(...)):
     if not verify_password(password, db_user["hashed_password"]):
         return JSONResponse(content={"success": False,"message": "Mot de passe incorrect"}, status_code=401)
 
-    user_ref = db.collection("users").document(npi)
-    return JSONResponse(content={"user": user_ref.get().to_dict()}, status_code=201)
+    user_datas = {
+        "npi": db_user.get('npi'),
+        "nom": db_user.get('nom'),
+        "prenom": db_user.get('prenom'),
+        "date": db_user.get('date'),
+        "email": db_user.get('email'),
+        "telephone": db_user.get('telephone'),
+    }
+    return JSONResponse(content={"user": user_datas}, status_code=201)
 
 @app.get('/patients')
 async def all_patients():
