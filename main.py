@@ -525,6 +525,8 @@ def verify_signature(msg, sig):
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google.cloud.firestore_v1 import FieldFilter
+from datetime import datetime
+from dateutil.parser import parse
 
 # Use the application default credentials.
 cred = credentials.Certificate('./med-book.json')
@@ -550,10 +552,16 @@ def get_user(username: str):
     doc = db.collection("users").document(username).get()
     return doc.to_dict() if doc.exists else None
 
+def is_date_past(date_str):
+    # Parse la date ISO8601 (sans fuseau horaire ici)
+    dt = parse(date_str, dayfirst=True) 
+    # dt = datetime.fromisoformat(date_str)
+    return dt < datetime.now(dt.tzinfo)
+
 @app.get('/users')
-async def get_users(data: dict = Body(...)):
+async def get_users():
     users_ref = db.collection("users").stream()
-    return [doc.to_dict() for doc in users_ref]
+    return JSONResponse(status_code=200, content={"success": True, "users":[doc.to_dict() for doc in users_ref]})
 
 @app.post('/login')
 async def login(data: dict = Body(...)):
@@ -566,6 +574,22 @@ async def login(data: dict = Body(...)):
     if not verify_password(password, db_user["hashed_password"]):
         return JSONResponse(content={"success": False,"message": "Mot de passe incorrect"}, status_code=401)
 
+    user_datas = {
+        "npi": db_user.get('npi'),
+        "nom": db_user.get('nom'),
+        "prenom": db_user.get('prenom'),
+        "date": db_user.get('date'),
+        "email": db_user.get('email'),
+        "telephone": db_user.get('telephone'),
+    }
+    return JSONResponse(content={"user": user_datas}, status_code=201)
+
+@app.get('/user_details')
+async def get_user(npi: str):
+    db_user = db.collection("users").document(npi).get().to_dict()
+    if not db_user:
+        return JSONResponse(status_code=404, content={"success": False, "message": "Ce utilisateur n'existe pas"})
+    
     user_datas = {
         "npi": db_user.get('npi'),
         "nom": db_user.get('nom'),
@@ -594,8 +618,7 @@ async def all_patients():
         patients_list.append(filtered_data)
     return JSONResponse(content={"patients": patients_list}, status_code=200)
 
-@app.get('/vaccines')
-async def get_vaccines_by_user(npi: str):
+def get_vaccins(npi: str):
     vaccins_ref = db.collection("vaccins").where(filter=FieldFilter("npi", "==", npi)).stream()
     vaccins_list = []
     for doc in vaccins_ref:
@@ -609,8 +632,13 @@ async def get_vaccines_by_user(npi: str):
             "signature": data.get("signature"),
         }
         vaccins_list.append(filtered_data)
-    
-    return JSONResponse(content={"vaccins": json.dumps(vaccins_list, ensure_ascii=False, indent=2)}, status_code=200)
+
+    return vaccins_list
+
+
+@app.get('/vaccins')
+async def get_vaccines_by_user(npi: str):
+    return JSONResponse(content={"vaccins": get_vaccins(npi)}, status_code=200)
 
 @app.post('/add_user')
 async def add_vaccine(data: dict = Body(...)):
@@ -640,7 +668,7 @@ def get_pubkey():
     response = lnd.get_info()
     return response.identity_pubkey
     
-@app.post('/add_vaccine')
+@app.post('/add_vaccin')
 def add_vaccine(data: dict = Body(...)):
     npi = data.get('npi')
 
@@ -649,7 +677,7 @@ def add_vaccine(data: dict = Body(...)):
     vaccin = data.get('vaccin')
     date = data.get('date')
     centre = data.get('centre')
-    date_expiration = data.get('date_expiration')
+    date_expiration = datetime(2025, 7, 1)
     infos_vaccin = {"npi":npi, "centre": centre,"vaccin": vaccin, "date": date, "date_expiration": date_expiration}
     
     try:
@@ -672,38 +700,43 @@ def add_vaccine(data: dict = Body(...)):
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-@app.post('/verify_vaccines')
+
+@app.post('/verify_vaccins')
 async def verify_vaccines(data: dict = Body(...)):
     npi = data.get('npi')
-    user_ref = db.collection("users").document(npi)
 
-    vaccins_in_book = user_ref.get().to_dict()['vaccins']
+    vaccins_in_book = get_vaccins(npi=npi)
 
     vaccines_to_check = data.get('vaccines_list')
 
     conform = True
 
-    messages = ""
+    messages = []
 
     for vaccine in vaccines_to_check:
-        vaccin = {}
-        if vaccine not in vaccins_in_book:
-            messages += f"Vaccin {vaccine}: non fait - "
+        if any(d.get('vaccin') == vaccine for d in vaccins_in_book):
+            messages.append({"vaccin": vaccine, "message": ": Non fait", "ok": False})
             conform = False
+
+        elif is_date_past(vaccine['date_expiration']):
+            messages.append({"vaccin": vaccine, "message": ": Expiré", "ok": False})
+            conform = False
+
         else:
             vaccin = vaccins_in_book[vaccine]
             signature = vaccin['signature']
             pub_key = vaccin['pub_key']
             message = f"{pub_key+vaccin['vaccin']}"
             if verify_signature(message, signature) == True:
-                messages += f"Vaccin {vaccine}: certifcate is ok - "
+                messages.append({"vaccin": vaccine, "message": ": Certifcat valide", "ok": True})
+
                 
             else:
                 print(message)
-                messages += f"Vaccin {vaccine}: certifcate invalid - "
+                messages.append({"vaccin": vaccine, "message": ": Certifcat invalide", "ok": False})
                 conform = False
 
-    return JSONResponse(content={"message": messages, "conformity": conform}, status_code=200)
+    return JSONResponse(content={"resultats": messages, "conformite": conform}, status_code=200)
 
 
 if __name__ == "__main__":
