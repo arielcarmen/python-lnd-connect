@@ -528,6 +528,16 @@ from google.cloud.firestore_v1 import FieldFilter
 from datetime import datetime
 from dateutil.parser import parse
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ou ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Use the application default credentials.
 cred = credentials.Certificate('./med-book.json')
 
