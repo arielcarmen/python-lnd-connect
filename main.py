@@ -524,6 +524,7 @@ def verify_signature(msg, sig):
     
 import firebase_admin
 from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1 import FieldFilter
 
 # Use the application default credentials.
 cred = credentials.Certificate('./med-book.json')
@@ -560,7 +561,7 @@ async def login(data: dict = Body(...)):
     password = data.get('password')
     db_user = db.collection("users").document(npi).get().to_dict()
     if not db_user:
-        return JSONResponse(status_code=404, content={"success": False, "message": "Utilisateur non trouvé"})
+        return JSONResponse(status_code=404, content={"success": False, "message": "Ce NPI n'existe pas"})
 
     if not verify_password(password, db_user["hashed_password"]):
         return JSONResponse(content={"success": False,"message": "Mot de passe incorrect"}, status_code=401)
@@ -588,9 +589,21 @@ async def all_patients():
 
 @app.get('/vaccines')
 async def get_vaccines_by_user(npi: str):
-    user_ref = db.collection("users").document(npi)
-    vaccins_in_book = user_ref.get().to_dict()['vaccins']
-    return JSONResponse(content={"vaccins": vaccins_in_book}, status_code=200)
+    vaccins_ref = db.collection("vaccins").where(filter=FieldFilter("npi", "==", npi)).stream()
+    vaccins_list = []
+    for doc in vaccins_ref:
+        data = doc.to_dict()
+        filtered_data = {
+            "vaccin": data.get("vaccin"),
+            "centre": data.get("centre"),
+            "date": data.get("date"),
+            "date_expiration": data.get("date_expiration"),
+            "centre_key": data.get("centre_key"),
+            "signature": data.get("signature"),
+        }
+        vaccins_list.append(filtered_data)
+    
+    return JSONResponse(content={"vaccins": json.dumps(vaccins_list, ensure_ascii=False, indent=2)}, status_code=200)
 
 @app.post('/add_user')
 async def add_vaccine(data: dict = Body(...)):
@@ -610,7 +623,7 @@ async def add_vaccine(data: dict = Body(...)):
     
     try:
         doc_ref = db.collection("users").document(npi)
-        doc_ref.set({"npi": npi,"hashed_password": password, "nom": nom, "prenom": prenom, "sexe": sexe, "email": email, "telephone": telephone, "date": date, "vaccins": {}})
+        doc_ref.set({"npi": npi,"hashed_password": password, "nom": nom, "prenom": prenom, "sexe": sexe, "email": email, "telephone": telephone, "date": date})
         return JSONResponse(content={"message": "Utilisateur crée avec succes"}, status_code=200)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
@@ -624,12 +637,13 @@ def get_pubkey():
 def add_vaccine(data: dict = Body(...)):
     npi = data.get('npi')
 
-    user_ref = db.collection("users").document(npi)
+    vaccin_ref = db.collection("vaccins")
 
     vaccin = data.get('vaccin')
     date = data.get('date')
+    centre = data.get('centre')
     date_expiration = data.get('date_expiration')
-    infos_vaccin = {"vaccin": vaccin, "date": date, "date_expiration": date_expiration}
+    infos_vaccin = {"npi":npi, "centre": centre,"vaccin": vaccin, "date": date, "date_expiration": date_expiration}
     
     try:
 
@@ -641,12 +655,8 @@ def add_vaccine(data: dict = Body(...)):
             infos_vaccin["signature"] = signature
 
             infos_vaccin["pub_key"] = get_pubkey()
-            
-            vaccins_in_book = user_ref.get().to_dict()['vaccins']
 
-            vaccins_in_book[vaccin] = infos_vaccin
-
-            user_ref.update({"vaccins": vaccins_in_book})
+            vaccin_ref.add(infos_vaccin)
 
             return JSONResponse(content={"message": "Vaccin crée avec succes"}, status_code=200)
         except grpc.RpcError as e:
