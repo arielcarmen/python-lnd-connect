@@ -629,6 +629,7 @@ def get_vaccins(npi: str):
     for doc in vaccins_ref:
         data = doc.to_dict()
         filtered_data = {
+            "id" :data.get('id'),
             "vaccin": data.get("vaccin"),
             "centre": data.get("centre"),
             "date": data.get("date"),
@@ -643,7 +644,7 @@ def get_vaccins(npi: str):
 
 @app.get('/vaccins')
 async def get_vaccines_of_patient(npi: str):
-    db_user = db.collection("users").document(npi).get().to_dict()
+    db_user = db.collection("users").document(npi).get()
     if not db_user:
         return JSONResponse(status_code=404, content={"success": False, "message": "Ce NPI n'existe pas"})
 
