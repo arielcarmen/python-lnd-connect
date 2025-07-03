@@ -584,8 +584,8 @@ async def login(data: dict = Body(...)):
     }
     return JSONResponse(content={"user": user_datas}, status_code=201)
 
-@app.get('/user_details')
-async def get_user(npi: str):
+@app.get('/patient_details')
+async def get_patient(npi: str):
     db_user = db.collection("users").document(npi).get().to_dict()
     if not db_user:
         return JSONResponse(status_code=404, content={"success": False, "message": "Ce utilisateur n'existe pas"})
@@ -602,7 +602,7 @@ async def get_user(npi: str):
 
 @app.get('/patients')
 async def all_patients():
-    patients_ref = db.collection("users").stream()
+    patients_ref = db.collection("users").where(filter=FieldFilter("role", "==", "patient")).stream()
     patients_list = []
     for doc in patients_ref:
         data = doc.to_dict()
@@ -619,6 +619,10 @@ async def all_patients():
     return JSONResponse(content={"patients": patients_list}, status_code=200)
 
 def get_vaccins(npi: str):
+    db_user = db.collection("users").document(npi).get().to_dict()
+    if not db_user:
+        return JSONResponse(status_code=404, content={"success": False, "message": "Ce NPI n'existe pas"})
+
     vaccins_ref = db.collection("vaccins").where(filter=FieldFilter("npi", "==", npi)).stream()
     vaccins_list = []
     for doc in vaccins_ref:
@@ -637,11 +641,15 @@ def get_vaccins(npi: str):
 
 
 @app.get('/vaccins')
-async def get_vaccines_by_user(npi: str):
+async def get_vaccines_of_patient(npi: str):
+    db_user = db.collection("users").document(npi).get().to_dict()
+    if not db_user:
+        return JSONResponse(status_code=404, content={"success": False, "message": "Ce NPI n'existe pas"})
+
     return JSONResponse(content={"vaccins": get_vaccins(npi)}, status_code=200)
 
-@app.post('/add_user')
-async def add_vaccine(data: dict = Body(...)):
+@app.post('/add_patient')
+async def add_patient(data: dict = Body(...)):
     npi = data.get('npi')
     nom = data.get('nom')
     prenom = data.get('prenom')
@@ -669,8 +677,12 @@ def get_pubkey():
     return response.identity_pubkey
     
 @app.post('/add_vaccin')
-def add_vaccine(data: dict = Body(...)):
+def add_vaccin(data: dict = Body(...)):
     npi = data.get('npi')
+
+    db_user = db.collection("users").document(npi).get().to_dict()
+    if not db_user:
+        return JSONResponse(status_code=404, content={"success": False, "message": "Ce NPI n'existe pas"})
 
     vaccin_ref = db.collection("vaccins")
 
@@ -702,9 +714,14 @@ def add_vaccine(data: dict = Body(...)):
 
 
 @app.post('/verify_vaccins')
-async def verify_vaccines(data: dict = Body(...)):
+async def verify_vaccins(data: dict = Body(...)):
     vaccines_to_check = data.get('vaccines_list')
     npi = data.get('npi')
+
+    db_user = db.collection("users").document(npi).get().to_dict()
+    if not db_user:
+        return JSONResponse(status_code=404, content={"success": False, "message": "Ce NPI n'existe pas"})
+
 
     vaccins_ref = db.collection("vaccins").where(filter=FieldFilter("npi", "==", npi)).stream()
     vaccins_in_book = {}
