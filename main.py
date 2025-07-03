@@ -554,7 +554,7 @@ def get_user(username: str):
 
 def is_date_past(date_str):
     # Parse la date ISO8601 (sans fuseau horaire ici)
-    dt = parse(date_str, dayfirst=True) 
+    dt = date_str
     # dt = datetime.fromisoformat(date_str)
     return dt < datetime.now(dt.tzinfo)
 
@@ -689,7 +689,7 @@ def add_vaccine(data: dict = Body(...)):
             signature = sign_response.signature
             infos_vaccin["signature"] = signature
 
-            infos_vaccin["pub_key"] = get_pubkey()
+            infos_vaccin["centre_key"] = get_pubkey()
 
             vaccin_ref.add(infos_vaccin)
 
@@ -703,38 +703,54 @@ def add_vaccine(data: dict = Body(...)):
 
 @app.post('/verify_vaccins')
 async def verify_vaccines(data: dict = Body(...)):
+    vaccines_to_check = data.get('vaccines_list')
     npi = data.get('npi')
 
-    vaccins_in_book = get_vaccins(npi=npi)
+    vaccins_ref = db.collection("vaccins").where(filter=FieldFilter("npi", "==", npi)).stream()
+    vaccins_in_book = {}
+    for doc in vaccins_ref:
+        data = doc.to_dict()
+        filtered_data = {
+            "npi": data.get("npi"),
+            "vaccin": data.get("vaccin"),
+            "centre": data.get("centre"),
+            "date": data.get("date"),
+            "date_expiration": data.get("date_expiration"),
+            "centre_key": data.get("centre_key"),
+            "signature": data.get("signature"),
+        }
+        vaccins_in_book[data.get("vaccin")] = filtered_data
 
-    vaccines_to_check = data.get('vaccines_list')
+    
+    print(data.get('vaccines_list'))
 
     conform = True
 
     messages = []
 
     for vaccine in vaccines_to_check:
-        if any(d.get('vaccin') == vaccine for d in vaccins_in_book):
+        if vaccine not in vaccins_in_book:
             messages.append({"vaccin": vaccine, "message": ": Non fait", "ok": False})
-            conform = False
-
-        elif is_date_past(vaccine['date_expiration']):
-            messages.append({"vaccin": vaccine, "message": ": Expiré", "ok": False})
             conform = False
 
         else:
             vaccin = vaccins_in_book[vaccine]
-            signature = vaccin['signature']
-            pub_key = vaccin['pub_key']
-            message = f"{pub_key+vaccin['vaccin']}"
-            if verify_signature(message, signature) == True:
-                messages.append({"vaccin": vaccine, "message": ": Certifcat valide", "ok": True})
 
-                
-            else:
-                print(message)
-                messages.append({"vaccin": vaccine, "message": ": Certifcat invalide", "ok": False})
+            if is_date_past(vaccin['date_expiration']):
+                messages.append({"vaccin": vaccine, "message": ": Expiré", "ok": False})
                 conform = False
+            else: 
+                signature = vaccin['signature']
+                npi = vaccin['npi']
+                message = f"{npi+vaccin['vaccin']}"
+
+                if verify_signature(message, signature) == True:
+                    messages.append({"vaccin": vaccine, "message": ": Certifcat valide", "ok": True})
+
+                else:
+                    print(message)
+                    messages.append({"vaccin": vaccine, "message": ": Certifcat invalide", "ok": False})
+                    conform = False
 
     return JSONResponse(content={"resultats": messages, "conformite": conform}, status_code=200)
 
