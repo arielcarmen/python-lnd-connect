@@ -700,10 +700,12 @@ def add_vaccin(data: dict = Body(...)):
     vaccin_ref = db.collection("vaccins")
 
     vaccin = data.get('vaccin')
+    injection_site = data.get('injection_site')
+    doctor_name = data.get('doctor_name')
     date = data.get('date')
     centre = data.get('centre')
     date_expiration = datetime(2025, 7, 1)
-    infos_vaccin = {"npi":npi, "centre": centre,"vaccin": vaccin, "date": date, "date_expiration": date_expiration}
+    infos_vaccin = {"doctor_name": doctor_name,"injection_site": injection_site, "npi":npi, "centre": centre,"vaccin": vaccin, "date": date, "date_expiration": date_expiration}
     
     try:
 
