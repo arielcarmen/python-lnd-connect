@@ -756,6 +756,12 @@ async def verify_vaccins(data: dict = Body(...)):
 
     conform = True
 
+    user_data = {
+        "nom": db_user.get("nom"),
+        "prenom": db_user.get("prenom"),
+        "npi": db_user.get("npi")
+    }
+
     messages = []
 
     for vaccine in vaccines_to_check:
@@ -782,7 +788,7 @@ async def verify_vaccins(data: dict = Body(...)):
                     messages.append({"vaccin": vaccine, "message": "Certifcat invalide", "ok": False})
                     conform = False
 
-    return JSONResponse(content={"resultats": messages, "conformite": conform}, status_code=200)
+    return JSONResponse(content={"resultats": messages, "conformite": conform, "user": user_data}, status_code=200)
 
 
 if __name__ == "__main__":
