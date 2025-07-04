@@ -712,15 +712,14 @@ def add_vaccin(data: dict = Body(...)):
     print(date)
     print(date_expiration)
 
-    iso_date_str = date_expiration
     # dt = datetime.strptime(iso_date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
     dt = datetime.strptime(date_expiration, "%Y-%m-%d")
 
-    ts = Timestamp()
-    ts.FromDatetime(dt)
-    ets = Timestamp()
-    ets.FromDatetime(date_obj)
-    infos_vaccin = {"doctor_name": doctor_name,"injection_site": injection_site, "npi":npi, "centre": centre,"vaccin": vaccin, "date": ts, "date_expiration": ets}
+    # ts = Timestamp()
+    # ts.FromDatetime(dt)
+    # ets = Timestamp()
+    # ets.FromDatetime(date_obj)
+    infos_vaccin = {"doctor_name": doctor_name,"injection_site": injection_site, "npi":npi, "centre": centre,"vaccin": vaccin, "date": date_obj, "date_expiration": dt}
     
     try:
 
