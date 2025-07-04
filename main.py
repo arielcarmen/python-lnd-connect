@@ -760,14 +760,14 @@ async def verify_vaccins(data: dict = Body(...)):
 
     for vaccine in vaccines_to_check:
         if vaccine not in vaccins_in_book:
-            messages.append({"vaccin": vaccine, "message": ": Non fait", "ok": False})
+            messages.append({"vaccin": vaccine, "message": "Non fait", "ok": False})
             conform = False
 
         else:
             vaccin = vaccins_in_book[vaccine]
 
             if is_date_past(vaccin['date_expiration']):
-                messages.append({"vaccin": vaccine, "message": ": Expiré", "ok": False})
+                messages.append({"vaccin": vaccine, "message": "Expiré", "ok": False})
                 conform = False
             else: 
                 signature = vaccin['signature']
@@ -775,11 +775,11 @@ async def verify_vaccins(data: dict = Body(...)):
                 message = f"{npi+vaccin['vaccin']}"
 
                 if verify_signature(message, signature) == True:
-                    messages.append({"vaccin": vaccine, "message": ": Certifcat valide", "ok": True})
+                    messages.append({"vaccin": vaccine, "message": "Certifcat valide", "ok": True})
 
                 else:
                     print(message)
-                    messages.append({"vaccin": vaccine, "message": ": Certifcat invalide", "ok": False})
+                    messages.append({"vaccin": vaccine, "message": "Certifcat invalide", "ok": False})
                     conform = False
 
     return JSONResponse(content={"resultats": messages, "conformite": conform}, status_code=200)
