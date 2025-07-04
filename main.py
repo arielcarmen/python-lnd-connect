@@ -525,6 +525,7 @@ def verify_signature(msg, sig):
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google.cloud.firestore_v1 import FieldFilter
+from google.protobuf.timestamp_pb2 import Timestamp
 from datetime import datetime
 from dateutil.parser import parse
 
@@ -705,7 +706,17 @@ def add_vaccin(data: dict = Body(...)):
     date = data.get('date')
     centre = data.get('centre')
     date_expiration = data.get('date_expiration')
-    infos_vaccin = {"doctor_name": doctor_name,"injection_site": injection_site, "npi":npi, "centre": centre,"vaccin": vaccin, "date": date, "date_expiration": date_expiration}
+
+    date_obj = datetime.strptime(date, "%Y-%m-%d")
+
+    iso_date_str = date_expiration
+    dt = datetime.strptime(iso_date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+
+    ts = Timestamp()
+    ts.FromDatetime(dt)
+    ets = Timestamp()
+    ets.FromDatetime(date_obj)
+    infos_vaccin = {"doctor_name": doctor_name,"injection_site": injection_site, "npi":npi, "centre": centre,"vaccin": vaccin, "date": ts, "date_expiration": date_expiration}
     
     try:
 
