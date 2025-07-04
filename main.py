@@ -670,7 +670,7 @@ async def add_patient(data: dict = Body(...)):
     date = data.get('date')
     email = data.get('email')
     telephone = data.get('telephone')
-    pwd = data.get('password')
+    pwd = "1@234567"
     role = "patient"
 
     if get_user(npi):
