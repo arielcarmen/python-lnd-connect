@@ -737,7 +737,7 @@ def add_vaccin(data: dict = Body(...)):
 
             return JSONResponse(content={"message": "Vaccin crée avec succes"}, status_code=200)
         except grpc.RpcError as e:
-            return JSONResponse(content={"error": str(e)}, status_code=500)
+            return JSONResponse(content={"error": "Signature impossible"}, status_code=400)
                 
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
